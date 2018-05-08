@@ -46,10 +46,12 @@ namespace Geeklist
     }
     class Stats : ICommand
     {
-        private int depth;
-        public Stats(int depth = 20)
+        private int from;
+        private int to;
+        public Stats(int from = 1, int to = 20)
         {
-            this.depth = depth;
+            this.from = from - 1;
+            this.to = to;
         }
         public void Execute(IState state)
         {
@@ -77,9 +79,11 @@ namespace Geeklist
                         })
                     .OrderByDescending(g => g.Count);
 
-                foreach (var item in filtered.Take(depth))
+                int i = 1;
+                foreach (var item in filtered.Skip(from).Take(to - from))
                 {
-                    WriteLine($"{item.Game.Id} :: {item.Game.Name} -- {item.Count}");
+                    WriteLine($"{i + from}) {item.Game.Id} :: {item.Game.Name} -- {item.Count}");
+                    i++;
                 }
             }
             else
@@ -228,8 +232,14 @@ namespace Geeklist
                 case "get" when args.Length > 0 && int.TryParse(args[0], out int listId):
                     return new GetList(listId);
 
-                case "stats" when args.Length > 0 && int.TryParse(args[0], out int d):
-                    return new Stats(d);
+                case "stats" when args.Length > 1 &&
+                    int.TryParse(args[0], out int from) && from >= 1 &&
+                    int.TryParse(args[1], out int to) && to > from:
+                    return new Stats(from, to);
+
+                case "stats" when args.Length > 0 &&
+                    int.TryParse(args[0], out int to) && to >= 1:
+                    return new Stats(1, to);
 
                 case "stats":
                     return new Stats();

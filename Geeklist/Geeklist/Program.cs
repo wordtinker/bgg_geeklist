@@ -1,4 +1,5 @@
-﻿using static System.Console;
+﻿using System.IO;
+using static System.Console;
 
 namespace Geeklist
 {
@@ -6,10 +7,12 @@ namespace Geeklist
     {
         string Delimiter { get; }
         string Collection { get; set; }
+        string IgnorePath { get; }
     }
     class State : IState
     {
         public string Delimiter => $"{Collection ?? ">>>"} ";
+        public string IgnorePath => Path.Combine(Directory.GetCurrentDirectory(), "ignore.xml");
         public string Collection { get; set; }
     }
     class Program

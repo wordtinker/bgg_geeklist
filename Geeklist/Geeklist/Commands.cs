@@ -21,27 +21,21 @@ namespace Geeklist
         }
         public void Execute(IState state)
         {
-            if (state.Collection != null)
+            IGeekItem newItem = new GeekItem
             {
-                IGeekItem newItem = new GeekItem
+                Game = new Game
                 {
-                    Game = new Game
-                    {
-                        Id = gameId.ToString(),
-                        Name = string.Empty
-                    }
-                };
-                List<IGeekItem> gameList;
-                string path = Path.Combine(Directory.GetCurrentDirectory(), state.Collection, "ignore.xml");
-                gameList = File.Exists(path) ? XMLConverter.FromXML(XDocument.Load(path)) : new List<IGeekItem>();
-                gameList.Add(newItem);
-                XDocument xml = XMLConverter.ToXML(gameList);
-                xml.Save(path);
-            }
-            else
-            {
-                WriteLine("Stage collection.");
-            }
+                    Id = gameId.ToString(),
+                    Name = string.Empty
+                }
+            };
+            List<IGeekItem> gameList;
+            string path = state.IgnorePath;
+            gameList = File.Exists(path) ? XMLConverter.FromXML(XDocument.Load(path)) : new List<IGeekItem>();
+            gameList.Add(newItem);
+            XDocument xml = XMLConverter.ToXML(gameList);
+            xml.Save(path);
+            
         }
     }
     class Stats : ICommand
@@ -64,7 +58,7 @@ namespace Geeklist
                     .SelectMany(xdoc => XMLConverter.FromXML(xdoc));
 
                 GeekItemComparer cmp = new GeekItemComparer();
-                string ignorePath = Path.Combine(Directory.GetCurrentDirectory(), state.Collection, "ignore.xml");
+                string ignorePath = state.IgnorePath;
                 var ignoredGames = File.Exists(ignorePath) ? XMLConverter.FromXML(XDocument.Load(ignorePath)) : new List<IGeekItem>();
                 var notIgnored = games.Where(g => !ignoredGames.Contains(g, cmp));
 

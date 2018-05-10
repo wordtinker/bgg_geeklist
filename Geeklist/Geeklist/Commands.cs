@@ -23,8 +23,7 @@ namespace Geeklist
         {
             if (position > 0 && position <= state.Games.Count)
             {
-                IGame toIgnore = state.Games[position - 1];
-                int gameId = int.Parse(toIgnore.Id);
+                int gameId = state.Games[position - 1].Id;
                 ICommand ignore = new Ignore(gameId);
                 ignore.Execute(state);
             }
@@ -47,7 +46,7 @@ namespace Geeklist
             {
                 Game = new Game
                 {
-                    Id = gameId.ToString(),
+                    Id = gameId,
                     Name = string.Empty
                 }
             };

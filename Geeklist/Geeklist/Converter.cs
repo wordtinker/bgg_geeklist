@@ -25,7 +25,7 @@ namespace Geeklist
                   {
                       Game = new Game
                       {
-                          Id = elem.Attribute("gameId").Value,
+                          Id = int.Parse(elem.Attribute("gameId").Value),
                           Name = elem.Attribute("gameName").Value
                       }
                   };

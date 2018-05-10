@@ -1,4 +1,6 @@
-﻿using System.IO;
+﻿using BGG;
+using System.Collections.Generic;
+using System.IO;
 using static System.Console;
 
 namespace Geeklist
@@ -8,12 +10,14 @@ namespace Geeklist
         string Delimiter { get; }
         string Collection { get; set; }
         string IgnorePath { get; }
+        List<IGame> Games { get; }
     }
     class State : IState
     {
         public string Delimiter => $"{Collection ?? ">>>"} ";
         public string IgnorePath => Path.Combine(Directory.GetCurrentDirectory(), "ignore.xml");
         public string Collection { get; set; }
+        public List<IGame> Games { get; } = new List<IGame>();
     }
     class Program
     {

@@ -12,6 +12,28 @@ namespace Geeklist
     {
         void Execute(IState state);
     }
+    class IgnorePos : ICommand
+    {
+        private int position;
+        public IgnorePos(int position)
+        {
+            this.position = position;
+        }
+        public void Execute(IState state)
+        {
+            if (position > 0 && position <= state.Games.Count)
+            {
+                IGame toIgnore = state.Games[position - 1];
+                int gameId = int.Parse(toIgnore.Id);
+                ICommand ignore = new Ignore(gameId);
+                ignore.Execute(state);
+            }
+            else
+            {
+                WriteLine("Index is out of range.");
+            }
+        }
+    }
     class Ignore : ICommand
     {
         private int gameId;
@@ -72,9 +94,11 @@ namespace Geeklist
                             Count = grp.Count()
                         })
                     .OrderByDescending(g => g.Count);
-
+                var result = filtered.Skip(from).Take(to - from);
+                state.Games.Clear();
+                state.Games.AddRange(result.Select(g => g.Game));
                 int i = 1;
-                foreach (var item in filtered.Skip(from).Take(to - from))
+                foreach (var item in result)
                 {
                     WriteLine($"{i + from}) {item.Game.Id} :: {item.Game.Name} -- {item.Count}");
                     i++;
@@ -140,6 +164,7 @@ namespace Geeklist
             if (Directory.Exists(path))
             {
                 state.Collection = file;
+                state.Games.Clear();
             }
             else
             {
@@ -182,6 +207,7 @@ namespace Geeklist
     {
         public void Execute(IState state)
         {
+            WriteLine("`position` :: Ignore game by position in the list.");
             WriteLine("ignore `id` :: Ignore given game `id`.");
             WriteLine("stats `depth` :: Show stats for selected collection");
             WriteLine("stats :: Show stats for selected collection");
@@ -240,6 +266,9 @@ namespace Geeklist
 
                 case "ignore" when args.Length > 0 && int.TryParse(args[0], out int gameId):
                     return new Ignore(gameId);
+                
+                case string val when int.TryParse(val, out int gamePos) && gamePos > 0:
+                    return new IgnorePos(gamePos);
 
                 default:
                     return new Void();

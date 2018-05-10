@@ -8,9 +8,41 @@ using System.Xml.Linq;
 
 namespace Geeklist
 {
+    internal class GameContainer
+    {
+        internal IGame Game { get; set; }
+        internal int Count { get; set; }
+    }
     interface ICommand
     {
         void Execute(IState state);
+    }
+    class Peek : ICommand
+    {
+        private int gameId;
+        private int limit;
+        public Peek(int gameId, int limit=10_000)
+        {
+            this.gameId = gameId;
+            this.limit = limit;
+        }
+        public void Execute(IState state)
+        {
+            var collections = from path in (new ListCollections()).MakeList()
+                    from gc in (new Stats(1, limit)).MakeList(path, state.IgnorePath)
+                    where gc.Game.Id == gameId
+                    select new
+                    {
+                        path,
+                        gc.Game,
+                        gc.Count
+                    };
+            foreach (var pack in collections)
+            {
+                string collection = pack.path.Split(Path.DirectorySeparatorChar).Last();
+                WriteLine($"{collection} >==> {pack.Game.Id} :: {pack.Game.Name} -- {pack.Count}");
+            }
+        }
     }
     class IgnorePos : ICommand
     {
@@ -68,36 +100,40 @@ namespace Geeklist
             this.from = from - 1;
             this.to = to;
         }
+        internal List<GameContainer> MakeList(string collection, string ignorePath)
+        {
+            string path = Path.Combine(Directory.GetCurrentDirectory(), collection);
+            var games =
+                Directory.GetFiles(path)
+                .Select(f => XDocument.Load(f))
+                .SelectMany(xdoc => XMLConverter.FromXML(xdoc));
+
+            GeekItemComparer cmp = new GeekItemComparer();
+            var ignoredGames = File.Exists(ignorePath) ? XMLConverter.FromXML(XDocument.Load(ignorePath)) : new List<IGeekItem>();
+            var notIgnored = games.Where(g => !ignoredGames.Contains(g, cmp));
+
+            var filtered =
+                notIgnored
+                .GroupBy(g => g, cmp)
+                .Select(grp =>
+                    new GameContainer
+                    {
+                        Game = grp.First().Game,
+                        Count = grp.Count()
+                    })
+                .OrderByDescending(g => g.Count);
+            var result = filtered.Skip(from).Take(to - from);
+            return result.ToList();
+        }
         public void Execute(IState state)
         {
             if (state.Collection != null)
             {
-                string path = Path.Combine(Directory.GetCurrentDirectory(), state.Collection);
-                var games =
-                    Directory.GetFiles(path)
-                    .Select(f => XDocument.Load(f))
-                    .SelectMany(xdoc => XMLConverter.FromXML(xdoc));
-
-                GeekItemComparer cmp = new GeekItemComparer();
-                string ignorePath = state.IgnorePath;
-                var ignoredGames = File.Exists(ignorePath) ? XMLConverter.FromXML(XDocument.Load(ignorePath)) : new List<IGeekItem>();
-                var notIgnored = games.Where(g => !ignoredGames.Contains(g, cmp));
-
-                var filtered =
-                    notIgnored
-                    .GroupBy(g => g, cmp)
-                    .Select(grp =>
-                        new
-                        {
-                            grp.First().Game,
-                            Count = grp.Count()
-                        })
-                    .OrderByDescending(g => g.Count);
-                var result = filtered.Skip(from).Take(to - from);
+                List<GameContainer> res = MakeList(state.Collection, state.IgnorePath);
                 state.Games.Clear();
-                state.Games.AddRange(result.Select(g => g.Game));
+                state.Games.AddRange(res.Select(g => g.Game));
                 int i = 1;
-                foreach (var item in result)
+                foreach (var item in res)
                 {
                     WriteLine($"{i + from}) {item.Game.Id} :: {item.Game.Name} -- {item.Count}");
                     i++;
@@ -186,10 +222,14 @@ namespace Geeklist
     }
     class ListCollections : ICommand
     {
-        public void Execute(IState state)
+        internal string[] MakeList()
         {
             string cwd = Directory.GetCurrentDirectory();
-            foreach (string dir in Directory.GetDirectories(cwd))
+            return Directory.GetDirectories(cwd);
+        }
+        public void Execute(IState state)
+        {
+            foreach (string dir in MakeList())
             {
                 WriteLine($"-- {dir}");
             }
@@ -206,6 +246,7 @@ namespace Geeklist
     {
         public void Execute(IState state)
         {
+            WriteLine("peek `gameId`:: Search for `gameId` across all the collections");
             WriteLine("`position` :: Ignore game by position in the list.");
             WriteLine("ignore `id` :: Ignore given game `id`.");
             WriteLine("stats `depth` :: Show stats for selected collection");
@@ -262,6 +303,9 @@ namespace Geeklist
 
                 case "stats":
                     return new Stats();
+
+                case "peek" when args.Length > 0 && int.TryParse(args[0], out int gameId):
+                    return new Peek(gameId);
 
                 case "ignore" when args.Length > 0 && int.TryParse(args[0], out int gameId):
                     return new Ignore(gameId);

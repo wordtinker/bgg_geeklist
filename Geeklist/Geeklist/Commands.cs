@@ -135,7 +135,7 @@ namespace Geeklist
                 int i = 1;
                 foreach (var item in res)
                 {
-                    WriteLine($"{i + from}) {item.Game.Id} :: {item.Game.Name} -- {item.Count}");
+                    WriteLine($"{i}) {item.Game.Id} :: {item.Game.Name} -- {item.Count}");
                     i++;
                 }
             }
@@ -149,6 +149,28 @@ namespace Geeklist
     //{
     //    // TODO Later
     //}
+
+    class GetHot : ICommand
+    {
+        public void Execute(IState state)
+        {
+            if (state.Collection != null)
+            {
+                var api = new BGG.API(new APIConfig());
+                List<IGeekItem> result = api.GetHotAsync().Result;
+                XDocument xml = XMLConverter.ToXML(result);
+
+                string name = $"{DateTime.Now.ToString("yyyy-M-dd--HH-mm")}_hot.xml";
+                string path = Path.Combine(Directory.GetCurrentDirectory(), state.Collection, name);
+
+                xml.Save(path);
+            }
+            else
+            {
+                WriteLine("Stage collection.");
+            }
+        }
+    }
 
     class GetList : ICommand
     {
@@ -249,8 +271,10 @@ namespace Geeklist
             WriteLine("peek `gameId`:: Search for `gameId` across all the collections");
             WriteLine("`position` :: Ignore game by position in the list.");
             WriteLine("ignore `id` :: Ignore given game `id`.");
+            WriteLine("stats `from` `to` :: Show stats for selected collection");
             WriteLine("stats `depth` :: Show stats for selected collection");
             WriteLine("stats :: Show stats for selected collection");
+            WriteLine("get hot :: Get hot section from BGG.");
             WriteLine("get `id` :: Get geelist from BGG with a given `id`.");
             WriteLine("stage `name` :: Choose working collection with a given `name`.");
             WriteLine("create `name` :: Create new collection with a given `name`.");
@@ -288,6 +312,9 @@ namespace Geeklist
 
                 case "stage" when args.Length > 0 && args[0].Trim().Length > 0:
                     return new SetCollection(args[0]);
+
+                case "get" when args.Length > 0 && args[0] == "hot":
+                    return new GetHot();
 
                 case "get" when args.Length > 0 && int.TryParse(args[0], out int listId):
                     return new GetList(listId);

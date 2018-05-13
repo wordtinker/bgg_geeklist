@@ -40,7 +40,7 @@ namespace Geeklist
             foreach (var pack in collections)
             {
                 string collection = pack.path.Split(Path.DirectorySeparatorChar).Last();
-                WriteLine($"{collection} >==> {pack.Game.Id} :: {pack.Game.Name} -- {pack.Count}");
+                WriteLine($"{pack.Game.Id} :: {pack.Game.Name} -- {pack.Count} <==< {collection}");
             }
         }
     }

@@ -203,6 +203,7 @@ namespace Geeklist
             {
                 WriteLine($"  {item.Name} = {item.Value}");
             }
+            WriteLine(state.Query.ToString());
         }
     }
 

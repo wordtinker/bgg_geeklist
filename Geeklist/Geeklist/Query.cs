@@ -1,5 +1,7 @@
 ﻿using BGG;
+using System;
 using System.Collections.Generic;
+using System.Reflection;
 
 namespace Geeklist
 {
@@ -9,7 +11,19 @@ namespace Geeklist
         public object this[string propertyName]
         {
             get => GetType().GetProperty(propertyName).GetValue(this, null);
-            set => GetType().GetProperty(propertyName).SetValue(this, value, null);
+            set
+            {
+                PropertyInfo propInfo = GetType().GetProperty(propertyName);
+                Type valType = propInfo.PropertyType;
+                if (valType == typeof(int?))
+                {
+                    propInfo.SetValue(this, int.Parse((string)value), null);
+                }
+                else
+                {
+                    propInfo.SetValue(this, value, null);
+                }
+            }
         }
         public IEnumerable<(string Name, object Value)> PropAndValues()
         {

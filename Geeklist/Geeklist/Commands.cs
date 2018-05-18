@@ -156,10 +156,7 @@ namespace Geeklist
         {
             if (state.Collection != null)
             {
-                var api = new BGG.API(new APIConfig()
-                {
-                    Delay = 10_000
-                });
+                var api = new BGG.API(new APIConfig());
                 List<IGame> result = api.GetQueryAsync(state.Query).Result;
                 XDocument xml = XMLConverter.ToXML(result);
 
@@ -216,7 +213,7 @@ namespace Geeklist
             if (state.Collection != null)
             {
                 var api = new BGG.API(new APIConfig());
-                List<IGeekItem> result = api.GetHotAsync().Result;
+                List<IGame> result = api.GetHotAsync().Result;
                 XDocument xml = XMLConverter.ToXML(result);
 
                 string name = $"{DateTime.Now.ToString("yyyy-M-dd--HH-mm")}_hot.xml";

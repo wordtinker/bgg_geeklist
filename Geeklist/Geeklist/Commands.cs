@@ -150,6 +150,65 @@ namespace Geeklist
     //    // TODO Later
     //}
 
+    class DoQuery : ICommand
+    {
+        public void Execute(IState state)
+        {
+            if (state.Collection != null)
+            {
+                var api = new BGG.API(new APIConfig()
+                {
+                    Delay = 10_000
+                });
+                List<IGame> result = api.GetQueryAsync(state.Query).Result;
+                XDocument xml = XMLConverter.ToXML(result);
+
+                string name = $"{DateTime.Now.ToString("yyyy-M-dd--HH-mm")}_query.xml";
+                string path = Path.Combine(Directory.GetCurrentDirectory(), state.Collection, name);
+
+                xml.Save(path);
+            }
+            else
+            {
+                WriteLine("Stage collection.");
+            }
+        }
+    }
+
+    class ConfigQuery : ICommand
+    {
+        private string prop;
+        private string val;
+
+        public ConfigQuery(string prop, string val)
+        {
+            this.prop = prop;
+            this.val = val;
+        }
+        public void Execute(IState state)
+        {
+            try
+            {
+                state.Query[prop] = val;
+            }
+            catch (Exception)
+            {
+                WriteLine("Wrong property name or value.");
+            }
+        }
+    }
+
+    class ShowQuery : ICommand
+    {
+        public void Execute(IState state)
+        {
+            foreach (var item in state.Query.PropAndValues())
+            {
+                WriteLine($"  {item.Name} = {item.Value}");
+            }
+        }
+    }
+
     class GetHot : ICommand
     {
         public void Execute(IState state)
@@ -264,10 +323,20 @@ namespace Geeklist
             Environment.Exit(0);
         }
     }
+    class QueryHelp : ICommand
+    {
+        public void Execute(IState state)
+        {
+            WriteLine("query :: Run advanced searh.");
+            WriteLine("qshow :: Display query params.");
+            WriteLine("qset `param` `value` :: Set query parameter.");
+        }
+    }
     class Help : ICommand
     {
         public void Execute(IState state)
         {
+            WriteLine("qhelp :: Help for query engine.");
             WriteLine("peek `gameId`:: Search for `gameId` across all the collections");
             WriteLine("`position` :: Ignore game by position in the list.");
             WriteLine("ignore `id` :: Ignore given game `id`.");
@@ -300,6 +369,9 @@ namespace Geeklist
             {
                 case "exit":
                     return new Exit();
+
+                case "qhelp":
+                    return new QueryHelp();
 
                 case "help":
                     return new Help();
@@ -336,7 +408,16 @@ namespace Geeklist
 
                 case "ignore" when args.Length > 0 && int.TryParse(args[0], out int gameId):
                     return new Ignore(gameId);
-                
+
+                case "query":
+                    return new DoQuery();
+
+                case "qset" when args.Length > 1:
+                    return new ConfigQuery(args[0], args[1]);
+
+                case "qshow":
+                    return new ShowQuery();
+
                 case string val when int.TryParse(val, out int gamePos) && gamePos > 0:
                     return new IgnorePos(gamePos);
 

@@ -11,6 +11,7 @@ namespace Geeklist
         string Collection { get; set; }
         string IgnorePath { get; }
         List<IGame> Games { get; }
+        SpecialQuery Query { get; set; }
     }
     class State : IState
     {
@@ -18,6 +19,7 @@ namespace Geeklist
         public string IgnorePath => Path.Combine(Directory.GetCurrentDirectory(), "ignore.xml");
         public string Collection { get; set; }
         public List<IGame> Games { get; } = new List<IGame>();
+        public SpecialQuery Query { get; set; } = new SpecialQuery();
     }
     class Program
     {

@@ -7,6 +7,17 @@ namespace Geeklist
 {
     static class XMLConverter
     {
+        public static XDocument ToXML(IEnumerable<IGame> games)
+        {
+            var serialized =
+                games.Select(g
+                => new XElement("listItem",
+                    new XAttribute("gameId", g.Id),
+                    new XAttribute("gameName", g.Name)
+                ));
+            return new XDocument(new XElement("Root", serialized));
+        }
+
         public static XDocument ToXML(IEnumerable<IGeekItem> games)
         {
             var serialized =

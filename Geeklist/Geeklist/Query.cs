@@ -19,6 +19,10 @@ namespace Geeklist
                 {
                     propInfo.SetValue(this, int.Parse((string)value), null);
                 }
+                else if (valType == typeof(double?))
+                {
+                    propInfo.SetValue(this, double.Parse((string)value), null);
+                }
                 else
                 {
                     propInfo.SetValue(this, value, null);

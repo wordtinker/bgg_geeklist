@@ -195,13 +195,45 @@ namespace Geeklist
         }
     }
 
+    class ConfigCompoundQuery : ICommand
+    {
+        private string dicName;
+        private string prop;
+        private string val;
+
+        public ConfigCompoundQuery(string dicName, string prop, string val)
+        {
+            this.dicName = dicName;
+            this.prop = prop;
+            this.val = val;
+        }
+        public void Execute(IState state)
+        {
+            // TODO several dicts
+            var dic = state.Query.Categories;
+            try
+            {
+                Enum.TryParse(prop, out Category key);
+                bool? newValue = null;
+                if (bool.TryParse(val, out bool x))
+                    newValue = x;
+                dic[key] = newValue;
+            }
+            catch (Exception)
+            {
+                WriteLine("Wrong property name or value.");
+            }
+        }
+    }
+
     class ShowQuery : ICommand
     {
         public void Execute(IState state)
         {
-            foreach (var item in state.Query.PropAndValues())
+            foreach (var (Name, Value) in state.Query.PropAndValues())
             {
-                WriteLine($"  {item.Name} = {item.Value}");
+                if (!(Value is null))
+                    WriteLine($"  {Name} = {Value}");
             }
             WriteLine(state.Query.ToString());
         }
@@ -328,6 +360,12 @@ namespace Geeklist
             WriteLine("query :: Run advanced searh.");
             WriteLine("qshow :: Display query params.");
             WriteLine("qset `param` `value` :: Set query parameter.");
+            WriteLine("qset Category `param` `value` :: Set category parameter. Value is true/false/null");
+            WriteLine("List of parameters:");
+            foreach (var (Name, Value) in state.Query.PropAndValues())
+            {
+                WriteLine($"  {Name}");
+            }
         }
     }
     class Help : ICommand
@@ -409,8 +447,12 @@ namespace Geeklist
 
                 case "query":
                     return new DoQuery();
-
-                case "qset" when args.Length > 1:
+                // E.g. qset Category AbstractStrategy true
+                case "qset" when args.Length == 3:
+                    return new ConfigCompoundQuery(args[0], args[1], args[2]);
+                
+                    // E.g qset Publisher 14
+                case "qset" when args.Length == 2:
                     return new ConfigQuery(args[0], args[1]);
 
                 case "qshow":

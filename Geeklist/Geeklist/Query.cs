@@ -13,6 +13,7 @@ namespace Geeklist
             get => GetType().GetProperty(propertyName).GetValue(this, null);
             set
             {
+                // Deal with reflexed properties
                 PropertyInfo propInfo = GetType().GetProperty(propertyName);
                 Type valType = propInfo.PropertyType;
                 if (valType == typeof(int?))
@@ -37,7 +38,19 @@ namespace Geeklist
         {
             foreach (var prop in GetType().BaseType.GetProperties())
             {
-                yield return (prop.Name, this[prop.Name]);
+                Type propType = prop.PropertyType;
+                if (propType.IsGenericType && propType.GetGenericTypeDefinition() == typeof(Dictionary<,>))
+                {
+                    Dictionary<Category, bool?> dic = (Dictionary<Category, bool?>)prop.GetValue(this);
+                    foreach (var kvp in dic)
+                    {
+                        yield return ($"{prop.Name}.{kvp.Key.ToString()}", kvp.Value);
+                    }
+                }
+                else
+                {
+                    yield return (prop.Name, this[prop.Name]);
+                }
             }
         }
     }

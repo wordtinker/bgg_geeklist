@@ -209,15 +209,26 @@ namespace Geeklist
         }
         public void Execute(IState state)
         {
-            // TODO several dicts
-            var dic = state.Query.Categories;
+            Dictionary<string, CategoryDescriptor> dic = null;
+            if (dicName == "Category")
+            {
+                dic = state.Query.Categories;
+            }
+            else if (dicName == "Domain")
+            {
+                dic = state.Query.Domains;
+            }
+            else if (dicName == "Mechanic")
+            {
+                dic = state.Query.Mechanics;
+            }
+            // else dic is null and fails
             try
             {
-                Enum.TryParse(prop, out Category key);
                 bool? newValue = null;
                 if (bool.TryParse(val, out bool x))
                     newValue = x;
-                dic[key] = newValue;
+                dic[prop].On = newValue;
             }
             catch (Exception)
             {

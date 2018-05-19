@@ -1,5 +1,6 @@
 ﻿using BGG;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Reflection;
 
@@ -41,10 +42,9 @@ namespace Geeklist
                 Type propType = prop.PropertyType;
                 if (propType.IsGenericType && propType.GetGenericTypeDefinition() == typeof(Dictionary<,>))
                 {
-                    Dictionary<Category, bool?> dic = (Dictionary<Category, bool?>)prop.GetValue(this);
-                    foreach (var kvp in dic)
+                    foreach (var kvp in (Dictionary<string, CategoryDescriptor>)prop.GetValue(this))
                     {
-                        yield return ($"{prop.Name}.{kvp.Key.ToString()}", kvp.Value);
+                        yield return ($"{prop.Name}.{kvp.Key.ToString()}", kvp.Value.On);
                     }
                 }
                 else

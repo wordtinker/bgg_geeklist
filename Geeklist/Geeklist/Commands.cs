@@ -14,6 +14,7 @@ namespace Geeklist
     {
         internal IGame Game { get; set; }
         internal int Count { get; set; }
+        internal bool Ignored { get; set; }
     }
     interface ICommand
     {
@@ -23,7 +24,7 @@ namespace Geeklist
     {
         private int gameId;
         private int limit;
-        public Peek(int gameId, int limit=10_000)
+        public Peek(int gameId, int limit=100_000)
         {
             this.gameId = gameId;
             this.limit = limit;
@@ -31,18 +32,19 @@ namespace Geeklist
         public void Execute(IState state)
         {
             var collections = from path in (new ListCollections()).MakeList()
-                    from gc in (new Stats(1, limit)).MakeList(path, state.IgnorePath)
+                    from gc in (new Stats(false, 1, limit)).MakeList(path, state.IgnorePath)
                     where gc.Game.Id == gameId
                     select new
                     {
                         path,
-                        gc.Game,
-                        gc.Count
+                        gc
                     };
             foreach (var pack in collections)
             {
                 string collection = pack.path.Split(Path.DirectorySeparatorChar).Last();
-                WriteLine($"{pack.Game.Id} :: {pack.Game.Name} -- {pack.Count} <==< {collection}");
+                ForegroundColor = pack.gc.Ignored ? ConsoleColor.DarkRed : ForegroundColor;
+                WriteLine($"{pack.gc.Game.Id} :: {pack.gc.Game.Name} -- {pack.gc.Count} <==< {collection}");
+                ResetColor();
             }
         }
     }
@@ -95,10 +97,12 @@ namespace Geeklist
     }
     class Stats : ICommand
     {
+        private bool trueIgnore;
         private int from;
         private int to;
-        public Stats(int from = 1, int to = 20)
+        public Stats(bool trueIgnore = true, int from = 1, int to = 20)
         {
+            this.trueIgnore = trueIgnore;
             this.from = from - 1;
             this.to = to;
         }
@@ -112,18 +116,19 @@ namespace Geeklist
 
             GeekItemComparer cmp = new GeekItemComparer();
             var ignoredGames = File.Exists(ignorePath) ? XMLConverter.FromXML(XDocument.Load(ignorePath)) : new List<IGeekItem>();
-            var notIgnored = games.Where(g => !ignoredGames.Contains(g, cmp));
 
-            var filtered =
-                notIgnored
+            var marked = games
                 .GroupBy(g => g, cmp)
-                .Select(grp =>
+                .Select(grp => 
                     new GameContainer
                     {
                         Game = grp.First().Game,
-                        Count = grp.Count()
+                        Count = grp.Count(),
+                        Ignored = ignoredGames.Contains(grp.First(), cmp)
                     })
                 .OrderByDescending(g => g.Count);
+
+            var filtered = trueIgnore ? marked.Where(g => !g.Ignored) : marked;
             var result = filtered.Skip(from).Take(to - from);
             return result.ToList();
         }
@@ -137,7 +142,9 @@ namespace Geeklist
                 int i = 1;
                 foreach (var item in res)
                 {
+                    ForegroundColor = item.Ignored ? ConsoleColor.DarkRed : ForegroundColor;
                     WriteLine($"{i}) {item.Game.Id} :: {item.Game.Name} -- {item.Count}");
+                    ResetColor();
                     i++;
                 }
             }
@@ -445,6 +452,7 @@ namespace Geeklist
             WriteLine("stats `from` `to` :: Show stats for selected collection");
             WriteLine("stats `depth` :: Show stats for selected collection");
             WriteLine("stats :: Show stats for selected collection");
+            WriteLine("cstats :: same as stats but will show ignored games.");
             WriteLine("get hot :: Get hot section from BGG.");
             WriteLine("get `id` :: Get geelist from BGG with a given `id`.");
             WriteLine("stage `name` :: Choose working collection with a given `name`.");
@@ -496,14 +504,26 @@ namespace Geeklist
                 case "stats" when args.Length > 1 &&
                     int.TryParse(args[0], out int from) && from >= 1 &&
                     int.TryParse(args[1], out int to) && to > from:
-                    return new Stats(from, to);
+                    return new Stats(true, from, to);
+
+                case "cstats" when args.Length > 1 &&
+                    int.TryParse(args[0], out int from) && from >= 1 &&
+                    int.TryParse(args[1], out int to) && to > from:
+                    return new Stats(false, from, to);
 
                 case "stats" when args.Length > 0 &&
                     int.TryParse(args[0], out int to) && to >= 1:
-                    return new Stats(1, to);
+                    return new Stats(true, 1, to);
+
+                case "cstats" when args.Length > 0 &&
+                    int.TryParse(args[0], out int to) && to >= 1:
+                    return new Stats(false, 1, to);
 
                 case "stats":
                     return new Stats();
+
+                case "cstats":
+                    return new Stats(false);
 
                 case "peek" when args.Length > 0 && int.TryParse(args[0], out int gameId):
                     return new Peek(gameId);

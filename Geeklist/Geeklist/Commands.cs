@@ -5,6 +5,8 @@ using System.Linq;
 using System.IO;
 using BGG;
 using System.Xml.Linq;
+using System.Runtime.Serialization;
+using System.Runtime.Serialization.Formatters.Binary;
 
 namespace Geeklist
 {
@@ -150,6 +152,58 @@ namespace Geeklist
     //    // TODO Later
     //}
 
+    class SaveQuery : ICommand
+    {
+        private string name;
+
+        public SaveQuery(string name)
+        {
+            this.name = name;
+        }
+        public void Execute(IState state)
+        {
+            try
+            {
+                IFormatter formatter = new BinaryFormatter();
+                Stream stream = new FileStream($"{name}.bin",
+                    FileMode.Create,
+                    FileAccess.Write, FileShare.None);
+                formatter.Serialize(stream, state.Query);
+                stream.Close();
+            }
+            catch (Exception)
+            {
+                WriteLine("Save error.");
+            }
+        }
+    }
+
+    class LoadQuery : ICommand
+    {
+        private string name;
+
+        public LoadQuery(string name)
+        {
+            this.name = name;
+        }
+        public void Execute(IState state)
+        {
+            try
+            {
+                IFormatter formatter = new BinaryFormatter();
+                Stream stream = new FileStream($"{name}.bin",
+                    FileMode.Open,
+                    FileAccess.Read, FileShare.Read);
+                state.Query = (SpecialQuery)formatter.Deserialize(stream);
+                stream.Close();
+            }
+            catch (Exception)
+            {
+                WriteLine("Load error.");
+            }
+        }
+    }
+
     class DoQuery : ICommand
     {
         public void Execute(IState state)
@@ -246,7 +300,6 @@ namespace Geeklist
                 if (!(Value is null))
                     WriteLine($"  {Name} = {Value}");
             }
-            WriteLine(state.Query.ToString());
         }
     }
 
@@ -369,6 +422,8 @@ namespace Geeklist
         public void Execute(IState state)
         {
             WriteLine("query :: Run advanced searh.");
+            WriteLine("qsave `filename` :: Save current query params to file.");
+            WriteLine("qload `filename` :: Restore query params from file.");
             WriteLine("qshow :: Display query params.");
             WriteLine("qset `param` `value` :: Set query parameter.");
             WriteLine("qset Category `param` `value` :: Set category parameter. Value is true/false/null");
@@ -465,6 +520,12 @@ namespace Geeklist
                     // E.g qset Publisher 14
                 case "qset" when args.Length == 2:
                     return new ConfigQuery(args[0], args[1]);
+
+                case "qsave" when args.Length > 0:
+                    return new SaveQuery(args[0]);
+
+                case "qload" when args.Length > 0:
+                    return new LoadQuery(args[0]);
 
                 case "qshow":
                     return new ShowQuery();

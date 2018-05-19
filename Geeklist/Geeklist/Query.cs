@@ -6,6 +6,7 @@ using System.Reflection;
 
 namespace Geeklist
 {
+    [Serializable]
     class SpecialQuery : Query
     {
         // Indexer method for setting properties in runtime

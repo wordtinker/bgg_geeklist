@@ -111,6 +111,7 @@ namespace Geeklist
             string path = Path.Combine(Directory.GetCurrentDirectory(), collection);
             var games =
                 Directory.GetFiles(path)
+                .Where(f => f.EndsWith(".xml", StringComparison.OrdinalIgnoreCase))
                 .Select(f => XDocument.Load(f))
                 .SelectMany(xdoc => XMLConverter.FromXML(xdoc));
 
@@ -169,18 +170,26 @@ namespace Geeklist
         }
         public void Execute(IState state)
         {
-            try
+            if (state.Collection != null)
             {
-                IFormatter formatter = new BinaryFormatter();
-                Stream stream = new FileStream($"{name}.bin",
-                    FileMode.Create,
-                    FileAccess.Write, FileShare.None);
-                formatter.Serialize(stream, state.Query);
-                stream.Close();
+                try
+                {
+                    string path = Path.Combine(Directory.GetCurrentDirectory(), state.Collection, $"{name}.bin");
+                    IFormatter formatter = new BinaryFormatter();
+                    Stream stream = new FileStream(path,
+                        FileMode.Create,
+                        FileAccess.Write, FileShare.None);
+                    formatter.Serialize(stream, state.Query);
+                    stream.Close();
+                }
+                catch (Exception)
+                {
+                    WriteLine("Save error.");
+                }
             }
-            catch (Exception)
+            else
             {
-                WriteLine("Save error.");
+                WriteLine("Stage collection.");
             }
         }
     }
@@ -195,18 +204,53 @@ namespace Geeklist
         }
         public void Execute(IState state)
         {
-            try
+            if (state.Collection != null)
             {
-                IFormatter formatter = new BinaryFormatter();
-                Stream stream = new FileStream($"{name}.bin",
-                    FileMode.Open,
-                    FileAccess.Read, FileShare.Read);
-                state.Query = (SpecialQuery)formatter.Deserialize(stream);
-                stream.Close();
+                try
+                {
+                    string path = Path.Combine(Directory.GetCurrentDirectory(), state.Collection, $"{name}.bin");
+                    IFormatter formatter = new BinaryFormatter();
+                    Stream stream = new FileStream(path,
+                        FileMode.Open,
+                        FileAccess.Read, FileShare.Read);
+                    state.Query = (SpecialQuery)formatter.Deserialize(stream);
+                    stream.Close();
+                }
+                catch (Exception)
+                {
+                    WriteLine("Load error.");
+                }
             }
-            catch (Exception)
+            else
             {
-                WriteLine("Load error.");
+                WriteLine("Stage collection.");
+            }
+        }
+    }
+
+    class Requery : ICommand
+    {
+        public void Execute(IState state)
+        {
+            if (state.Collection != null)
+            {
+                string path = Path.Combine(Directory.GetCurrentDirectory(), state.Collection);
+                var queryFiles = Directory.GetFiles(path)
+                    .Where(f => f.EndsWith(".bin", StringComparison.OrdinalIgnoreCase))
+                    .Select(f => Path.GetFileNameWithoutExtension(f));
+
+                foreach (var name in queryFiles)
+                {
+                    ICommand qload = new LoadQuery(name);
+                    qload.Execute(state);
+
+                    ICommand query = new DoQuery();
+                    query.Execute(state);
+                }
+            }
+            else
+            {
+                WriteLine("Stage collection.");
             }
         }
     }
@@ -221,7 +265,7 @@ namespace Geeklist
                 List<IGame> result = api.GetQueryAsync(state.Query).Result;
                 XDocument xml = XMLConverter.ToXML(result);
 
-                string name = $"{DateTime.Now.ToString("yyyy-M-dd--HH-mm")}_query.xml";
+                string name = $"{DateTime.Now.ToString("yyyy-M-dd--HH-mm-ss")}_query.xml";
                 string path = Path.Combine(Directory.GetCurrentDirectory(), state.Collection, name);
 
                 xml.Save(path);
@@ -456,7 +500,8 @@ namespace Geeklist
     {
         public void Execute(IState state)
         {
-            WriteLine("query :: Run advanced searh.");
+            WriteLine("query :: Run advanced search.");
+            WriteLine("requery :: Run all saved queries.");
             WriteLine("qsave `filename` :: Save current query params to file.");
             WriteLine("qload `filename` :: Restore query params from file.");
             WriteLine("qshow :: Display query params.");
@@ -564,6 +609,9 @@ namespace Geeklist
 
                 case "ignore" when args.Length > 0 && int.TryParse(args[0], out int gameId):
                     return new Ignore(gameId);
+
+                case "requery":
+                    return new Requery();
 
                 case "query":
                     return new DoQuery();

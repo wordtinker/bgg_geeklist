@@ -310,6 +310,34 @@ namespace Geeklist
         }
     }
 
+    class GetTop : ICommand
+    {
+        private int depth;
+
+        public GetTop(int depth)
+        {
+            this.depth = depth;
+        }
+        public void Execute(IState state)
+        {
+            if (state.Collection != null)
+            {
+                var api = new BGG.API(new APIConfig());
+                List<IGame> result = api.GetTopAsync(depth).Result;
+                XDocument xml = XMLConverter.ToXML(result);
+
+                string name = $"{DateTime.Now.ToString("yyyy-M-dd--HH-mm")}_top.xml";
+                string path = Path.Combine(Directory.GetCurrentDirectory(), state.Collection, name);
+
+                xml.Save(path);
+            }
+            else
+            {
+                WriteLine("Stage collection.");
+            }
+        }
+    }
+
     class GetHot : ICommand
     {
         public void Execute(IState state)
@@ -453,6 +481,7 @@ namespace Geeklist
             WriteLine("stats `depth` :: Show stats for selected collection");
             WriteLine("stats :: Show stats for selected collection");
             WriteLine("cstats :: same as stats but will show ignored games.");
+            WriteLine("get top `x` :: Get top x games from BGG.");
             WriteLine("get hot :: Get hot section from BGG.");
             WriteLine("get `id` :: Get geelist from BGG with a given `id`.");
             WriteLine("stage `name` :: Choose working collection with a given `name`.");
@@ -494,6 +523,11 @@ namespace Geeklist
 
                 case "stage" when args.Length > 0 && args[0].Trim().Length > 0:
                     return new SetCollection(args[0]);
+
+                case "get" when args.Length > 1 && args[0] == "top"
+                                && int.TryParse(args[1], out int depth)
+                                && depth > 0:
+                    return new GetTop(depth);
 
                 case "get" when args.Length > 0 && args[0] == "hot":
                     return new GetHot();

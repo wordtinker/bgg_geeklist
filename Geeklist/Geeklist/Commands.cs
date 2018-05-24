@@ -59,9 +59,8 @@ namespace Geeklist
         {
             if (position > 0 && position <= state.Games.Count)
             {
-                string target = "https://boardgamegeek.com/boardgame/{0}";
-                int gameId = state.Games[position - 1].Id;
-                System.Diagnostics.Process.Start(string.Format(target, gameId));
+                IGame game = state.Games[position - 1];
+                System.Diagnostics.Process.Start(game.ToString());
             }
             else
             {

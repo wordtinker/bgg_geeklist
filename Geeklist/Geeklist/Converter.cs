@@ -13,20 +13,14 @@ namespace Geeklist
                 games.Select(g
                 => new XElement("listItem",
                     new XAttribute("gameId", g.Id),
-                    new XAttribute("gameName", g.Name)
+                    new XAttribute("gameName", g.Name),
+                    new XAttribute("uri", g.ToString())
                 ));
             return new XDocument(new XElement("Root", serialized));
         }
-
         public static XDocument ToXML(IEnumerable<IGeekItem> games)
         {
-            var serialized =
-                games.Select(i
-                => new XElement("listItem",
-                    new XAttribute("gameId", i.Game.Id),
-                    new XAttribute("gameName", i.Game.Name)
-                ));
-            return new XDocument(new XElement("Root", serialized));
+            return ToXML(games.Select(gi => gi.Game));
         }
         public static List<IGeekItem> FromXML(XDocument xdoc)
         {

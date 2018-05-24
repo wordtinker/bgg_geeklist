@@ -248,7 +248,13 @@ namespace Geeklist
             }
         }
     }
-
+    class ResetQuery : ICommand
+    {
+        public void Execute(IState state)
+        {
+            state.Query = new SpecialQuery();
+        }
+    }
     class Requery : ICommand
     {
         public void Execute(IState state)
@@ -522,6 +528,7 @@ namespace Geeklist
         public void Execute(IState state)
         {
             WriteLine("query :: Run advanced search.");
+            WriteLine("qreset :: Reset params to default.");
             WriteLine("requery :: Run all saved queries.");
             WriteLine("qsave `filename` :: Save current query params to file.");
             WriteLine("qload `filename` :: Restore query params from file.");
@@ -634,6 +641,9 @@ namespace Geeklist
 
                 case "requery":
                     return new Requery();
+
+                case "qreset":
+                    return new ResetQuery();
 
                 case "query":
                     return new DoQuery();

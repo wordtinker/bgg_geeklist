@@ -48,6 +48,28 @@ namespace Geeklist
             }
         }
     }
+    class OpenBrowser : ICommand
+    {
+        private int position;
+        public OpenBrowser(int position)
+        {
+            this.position = position;
+        }
+        public void Execute(IState state)
+        {
+            if (position > 0 && position <= state.Games.Count)
+            {
+                string target = "https://boardgamegeek.com/boardgame/{0}";
+                int gameId = state.Games[position - 1].Id;
+                System.Diagnostics.Process.Start(string.Format(target, gameId));
+            }
+            else
+            {
+                WriteLine("Index is out of range.");
+            }
+        }
+
+    }
     class IgnorePos : ICommand
     {
         private int position;
@@ -520,6 +542,7 @@ namespace Geeklist
         {
             WriteLine("qhelp :: Help for query engine.");
             WriteLine("peek `gameId`:: Search for `gameId` across all the collections");
+            WriteLine("o `position` :: Open game page on bgg by position.");
             WriteLine("`position` :: Ignore game by position in the list.");
             WriteLine("ignore `id` :: Ignore given game `id`.");
             WriteLine("stats `from` `to` :: Show stats for selected collection");
@@ -631,6 +654,9 @@ namespace Geeklist
 
                 case "qshow":
                     return new ShowQuery();
+
+                case "o" when args.Length > 0 && int.TryParse(args[0], out int gamePos) && gamePos > 0:
+                    return new OpenBrowser(gamePos);
 
                 case string val when int.TryParse(val, out int gamePos) && gamePos > 0:
                     return new IgnorePos(gamePos);

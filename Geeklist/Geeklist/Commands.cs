@@ -395,7 +395,8 @@ namespace Geeklist
             {
                 var api = new BGG.API(new APIConfig());
                 List<IGame> result = api.GetTopAsync(depth).Result;
-                XDocument xml = XMLConverter.ToXML(result);
+                // Ensure list is truncated to original request depth
+                XDocument xml = XMLConverter.ToXML(result.Take(depth));
 
                 string name = $"{DateTime.Now.ToString("yyyy-M-dd--HH-mm")}_top.xml";
                 string path = Path.Combine(Directory.GetCurrentDirectory(), state.Collection, name);
